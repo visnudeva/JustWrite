@@ -204,6 +204,7 @@
             font-size: 16px;
             outline: none;
             transition: background-color 0.3s;
+            overflow-y: auto; /* Enable vertical scrolling when content exceeds height */
         }
         
         #editor:empty:before {
@@ -415,15 +416,29 @@
         setInterval(() => {
             const content = editor.innerHTML;
             localStorage.setItem(DRAFT_KEY, content);
-            
+
             document.getElementById('status').innerText = "Autosaved";
-            
+
             // Briefly fade status to indicate save
             const statusEl = document.getElementById('status');
             statusEl.style.opacity = '0.5';
             setTimeout(() => statusEl.style.opacity = '1', 500);
 
         }, 10000); // 10 Seconds
+
+        function getEditorContent() {
+            // Get content from all pages
+            const pages = document.querySelectorAll('#editor');
+            let content = '';
+
+            pages.forEach(page => {
+                content += page.innerHTML;
+                // Add a page break indicator between pages (will be handled in PDF generation)
+                content += '<div class="page-break" style="page-break-after: always; display: none;"></div>';
+            });
+
+            return content;
+        }
 
         function loadDraft() {
             const saved = localStorage.getItem(DRAFT_KEY);
@@ -502,7 +517,11 @@
             const words = text.trim().split(/\s+/).filter(w => w.length > 0).length;
             document.getElementById('word-count').innerText = `${words} words`;
         }
-        editor.addEventListener('input', updateStats);
+
+        // Add event listeners to existing editor
+        if (editor) {
+            editor.addEventListener('input', updateStats);
+        }
 
         // --- Markdown Converter ---
         function convertToMarkdown() {
@@ -538,7 +557,7 @@
 
             showToast("Generating PDF...");
             const opt = {
-                margin:       10, 
+                margin:       10,
                 filename:     'document.pdf',
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { scale: 2, useCORS: true },
@@ -603,7 +622,7 @@
         document.getElementById('fileInput').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            
+
             if (file.name.toLowerCase().endsWith('.pdf')) {
                 showToast("Error: PDFs cannot be opened for editing.");
                 e.target.value = '';
@@ -631,7 +650,7 @@
                 } else {
                     editor.innerText = event.target.result;
                 }
-                
+
                 showToast(`Opened ${file.name}`);
                 updateStats();
             };
